@@ -1,0 +1,10 @@
+
+<resources>
+    <style name="WarehouseLaunchTheme" parent="WarehouseTheme">
+        <item name="android:windowBackground">#1E1B6B</item>
+        <item name="android:windowSplashScreenBackground">#1E1B6B</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/warehouse_icon</item>
+        <item name="android:statusBarColor">#1E1B6B</item>
+        <item name="android:navigationBarColor">#06B6D4</item>
+    </style>
+</resources>

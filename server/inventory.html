@@ -1,0 +1,73 @@
+
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Warehouse — учёт товаров</title>
+<link rel="icon" href="/static/warehouse.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/warehouse.css">
+<script defer src="/static/dashboard.js"></script>
+</head>
+<body>
+<main class="wrap">
+<div class="win">
+<header class="title"><span>Склад — учёт товаров</span><a href="/">На главную</a></header>
+<div class="body">
+<nav class="menu" aria-label="Разделы">
+<button data-page="products">Товары</button>
+<button data-page="receipt">Приход</button>
+<button data-page="shipment">Расход</button>
+<button data-page="purchases">Закупки</button>
+<button data-page="reports">Отчёты</button>
+<button id="scanner">Сканер Android</button>
+</nav>
+<div class="work">
+<h1 id="title">Товары</h1>
+<div class="metrics" aria-label="Сводка по складу">
+<button class="b" data-stock="all">Товарные позиции <strong id="items">—</strong></button>
+<button class="b" data-stock="available">Единицы на складе <strong id="units">—</strong></button>
+<button class="b" data-stock="low">Ниже минимума <strong id="low">—</strong></button>
+</div>
+<div class="bar">
+<input id="search" type="search" aria-label="Поиск по названию или штрихкоду" placeholder="Поиск по названию">
+<select id="category" aria-label="Категория"><option value="">Все категории</option></select>
+<span class="sp"></span>
+<button class="b" id="low-filter">Что заканчивается</button>
+<button class="b main" id="add">Добавить</button>
+<button class="b main" id="new" hidden>Новая операция</button>
+</div>
+<form id="add-form" class="product-form" hidden>
+<label>Штрихкод<input name="barcode" inputmode="numeric" pattern="[0-9]{8,14}" required></label>
+<label>Название<input name="name" maxlength="100" required></label>
+<label>Категория<input name="category" maxlength="60"></label>
+<label>Кол-во<input type="number" name="stock" min="0" max="1000000" value="0" required></label>
+<label>Цена, ₽<input type="number" name="price" min="0" max="100000000" step="0.01" value="0" required></label>
+<label>Минимум<input type="number" name="minimum" min="0" max="1000000" value="5" required></label>
+<label>Целевой остаток<input type="number" name="target" min="0" max="1000000" value="20" required></label>
+<button class="b main" type="submit">Сохранить</button>
+<p id="add-status" role="status"></p>
+</form>
+<p id="status" role="status" hidden></p>
+<div class="tw"><table><thead id="columns"></thead><tbody id="rows"></tbody></table></div>
+</div>
+</div>
+<footer class="status"><span id="rows-info"></span><span id="total-value"></span></footer>
+</div>
+</main>
+<dialog id="dialog">
+<form id="operation">
+<h2 id="operation-title">Операция</h2>
+<label>Товар<select id="product" required></select></label>
+<label>Количество в штуках<input id="quantity" type="number" value="1" min="1" max="1000000" required></label>
+<p id="operation-status" role="status"></p>
+<div class="bar"><button class="b main" id="submit" type="submit">Провести</button><button class="b" id="close" type="button">Закрыть</button></div>
+</form>
+</dialog>
+<dialog id="scanner-help">
+<h2>Сканер Android</h2>
+<p>Откройте Warehouse на телефоне. Выберите «Учёт» → «Сканировать камерой» и поместите этикетку в рамку. После считывания приложение найдёт товар.</p>
+<p>В разделе «Подключение» укажите локальный адрес ПК с портом 8000. В эмуляторе используйте <code>http://10.0.2.2:8000</code>.</p>
+<form method="dialog"><button class="b">Закрыть</button></form>
+</dialog>
+</body></html>

@@ -1,43 +1,4 @@
-<!doctype html>
-<html lang="ru">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Складской учёт</title>
-<link rel="stylesheet" href="/static/dashboard.css">
-<script defer src="/static/dashboard.js"></script>
-</head>
-<body>
-<aside>
-  <a class="brand" href="/"><span class="mark" aria-hidden="true">▦</span> Складской учёт</a>
-  <nav aria-label="Разделы">
-    <button data-page="products" class="active"><span aria-hidden="true">▤</span> Товары</button>
-    <button data-page="movements"><span aria-hidden="true">⇄</span> Журнал</button>
-    <button data-page="purchases"><span aria-hidden="true">▣</span> Закупки</button>
-  </nav>
-  <a class="api" href="/api">Документация API ↗</a>
-</aside>
-<main>
-  <header><div><p class="eyebrow">УЧЁТ ЗАПАСОВ</p><h1 id="title">Товары</h1><p id="description">Следите за остатками и проводите складские операции.</p></div><button class="primary" id="new">＋ Новая операция</button></header>
-  <section class="metrics" aria-label="Сводка по складу">
-    <article><p>Товарные позиции</p><strong id="items">—</strong></article>
-    <article><p>Единицы на складе</p><strong id="units">—</strong></article>
-    <article class="attention"><p>Ниже минимума</p><strong id="low">—</strong></article>
-  </section>
-  <section class="records" aria-labelledby="list-title">
-    <div class="toolbar"><h2 id="list-title">Каталог товаров</h2><label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="Поиск по названию или штрихкоду" placeholder="Поиск по товарам"></label><button id="refresh" class="secondary">Обновить</button></div>
-    <p id="status" role="status" hidden></p>
-    <div class="table-wrap"><table><thead id="columns"></thead><tbody id="rows"></tbody></table></div>
-  </section>
-</main>
-<dialog id="dialog">
-  <form id="operation">
-    <div class="dialog-head"><h2>Новая операция</h2><button id="close" type="button" class="secondary">Закрыть</button></div>
-    <label>Товар<select id="product" required></select></label>
-    <label>Вид операции<select id="kind"><option value="receipt">Приёмка</option><option value="shipment">Отгрузка</option></select></label>
-    <label>Количество в штуках<input id="quantity" type="number" value="1" min="1" max="1000000" required></label>
-    <p id="operation-status" role="status"></p>
-    <button id="submit" type="submit" class="primary">Провести операцию</button>
-  </form>
-</dialog>
-</body>
-</html>
+<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Склад — учёт товаров</title><link rel="icon" href="/static/warehouse.svg" type="image/svg+xml"><link rel="stylesheet" href="/static/warehouse.css"><body><main class="wrap"><div class="site"><div class="sh"><img src="/static/warehouse.svg" width="28" height="28" alt=""><b>Склад</b><a href="/inventory">Товары</a><a href="#about">О системе</a><a href="/api">API</a></div>
+<div class="hero"><h1>Учёт товаров на складе без таблиц в Excel</h1><p>Видно, что есть в наличии, что пришло и что ушло. Когда товар заканчивается, он выделяется в списке.</p><a class="b main" href="/inventory">Открыть список товаров</a></div>
+<div class="cols" id="about"><div><span>1</span><h3>Остатки</h3><p>Количество каждой позиции всегда актуально.</p></div><div><span>2</span><h3>Приход и расход</h3><p>Каждая операция записывается с датой.</p></div><div><span>3</span><h3>Отчёты</h3><p>Сводка по последним складским операциям.</p></div></div>
+<div class="sf"><span>© 2026 Склад</span><span>Учебный проект</span></div></div></main></body></html>

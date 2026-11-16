@@ -1,6 +1,8 @@
 
 import tempfile
 import unittest
+import sqlite3
+from contextlib import closing
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -29,7 +31,8 @@ class InventoryTests(unittest.TestCase):
                 if p["barcode"] == CODE and p["status"] == "open"]
 
     def test_catalog_and_unknown_barcode(self):
-        self.assertEqual(len(self.client.get("/api/products").json), 3)
+        catalog = self.client.get("/api/products").json
+        self.assertEqual(len(catalog), 9)
         self.assertEqual(self.client.get("/api/products/99999999").status_code, 404)
 
     def test_receipt_closes_initial_request(self):
@@ -37,6 +40,31 @@ class InventoryTests(unittest.TestCase):
         self.assertEqual(self.move("receipt", 10, "receipt-10").status_code, 201)
         self.assertEqual(self.balance(), 10)
         self.assertEqual(self.active(), [])
+
+    def test_product_creation_and_duplicate_barcode(self):
+        product = dict(barcode="12345678", name="Стойка", category="Комплектующие",
+                       stock=2, minimum=4, target=10, price_kopecks=129900)
+        created = self.client.post("/api/products", json=product)
+        self.assertEqual(created.status_code, 201)
+        self.assertEqual(self.client.post("/api/products", json=product).status_code, 409)
+        self.assertEqual(self.client.get("/api/products/12345678").json["price_kopecks"], 129900)
+        movements = self.client.get("/api/movements").json
+        self.assertEqual([(m["kind"], m["quantity"]) for m in movements], [("receipt", 2)])
+        purchases = self.client.get("/api/purchases").json
+        self.assertEqual([p["quantity"] for p in purchases if p["barcode"] == "12345678"], [8])
+
+    def test_legacy_database_keeps_stock_after_migration(self):
+        db_path = Path(self.tmp.name) / "legacy.db"
+        with closing(sqlite3.connect(db_path)) as db, db:
+            db.executescript("""
+                CREATE TABLE products(id INTEGER PRIMARY KEY, barcode TEXT NOT NULL UNIQUE, name TEXT NOT NULL,
+                                      stock INTEGER NOT NULL DEFAULT 0, minimum INTEGER NOT NULL, target INTEGER NOT NULL);
+                INSERT INTO products VALUES(1,'4601234567893','Старый кабель',37,5,20);
+            """)
+        for _ in range(2):
+            record = create_app(db_path).test_client().get("/api/products/" + CODE).json
+            self.assertEqual((record["name"], record["stock"], record["price_kopecks"]),
+                             ("Старый кабель", 37, 39000))
 
     def test_threshold_and_replenishment(self):
         self.move("receipt", 10, "threshold0")

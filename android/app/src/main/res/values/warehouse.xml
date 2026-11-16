@@ -1,0 +1,13 @@
+
+<resources>
+    <string name="app_name">Warehouse</string>
+    <style name="WarehouseTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:colorAccent">#2F4A3A</item>
+        <item name="android:windowBackground">#F5F2EA</item>
+        <item name="android:statusBarColor">#2F4A3A</item>
+        <item name="android:navigationBarColor">#2F4A3A</item>
+    </style>
+    <style name="WarehouseLaunchTheme" parent="WarehouseTheme">
+        <item name="android:windowBackground">#1E1B6B</item>
+    </style>
+</resources>

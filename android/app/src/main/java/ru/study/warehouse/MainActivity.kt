@@ -1,7 +1,9 @@
 
 package ru.study.warehouse
 
-import android.app.Activity
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -12,21 +14,30 @@ import android.text.InputType
 import android.view.View
 import android.view.Gravity
 import android.widget.*
-import com.google.zxing.integration.android.IntentIntegrator
-import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.NumberFormat
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.Executors
 
-class MainActivity : Activity() {
-    private val ink = Color.parseColor("#142C37")
-    private val teal = Color.parseColor("#006861")
-    private val paper = Color.parseColor("#EDF4F3")
-    private val muted = Color.parseColor("#50696D")
-    private val mint = Color.parseColor("#DFEDEB")
+class MainActivity : ComponentActivity() {
+    private val ink = Color.parseColor("#222622")
+    private val green = Color.parseColor("#2F4A3A")
+    private val paper = Color.parseColor("#F5F2EA")
+    private val muted = Color.parseColor("#55584F")
+    private val soft = Color.parseColor("#ECE8DC")
+    private val white = Color.parseColor("#FFFDF8")
+    private val line = Color.parseColor("#DCD7C9")
+    private val money = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("ru-RU"))
     private val network = Executors.newSingleThreadExecutor()
     private val preferences by lazy { getSharedPreferences("warehouse", MODE_PRIVATE) }
     private lateinit var content: LinearLayout
@@ -40,35 +51,70 @@ class MainActivity : Activity() {
         get() = preferences.getString("pending", null)
         set(value) { preferences.edit().putString("pending", value).commit() }
     private val server get() = preferences.getString("server", "http://10.0.2.2:8000")!!
+    private val barcodePattern = Regex("[0-9]{8,14}")
+    private val cameraPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) openScanner()
+        else feedback("Камера недоступна. Введите код вручную или разрешите доступ в настройках.", true)
+    }
+    private val scanner = registerForActivityResult(ScanContract()) { result ->
+        val code = result.contents?.trim()
+        if (code != null && pending == null && screen == "Операция") {
+            barcode.setText(code)
+            lookupBarcode(scanned = true)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        show("Операция")
+        if (savedInstanceState == null) {
+            window.statusBarColor = Color.parseColor("#1E1B6B")
+            window.navigationBarColor = Color.parseColor("#06B6D4")
+            val splash = WarehouseSplash(this)
+            setContentView(splash)
+            splash.postDelayed({ if (!isFinishing && !isDestroyed) show("Операция") }, 1150)
+        } else {
+            show("Операция")
+        }
+        if (savedInstanceState != null && pending == null) {
+            barcode.setText(savedInstanceState.getString("barcode", ""))
+            quantity.setText(savedInstanceState.getString("quantity", "1"))
+            kind.setSelection(savedInstanceState.getInt("kind", 0))
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        if (screen == "Операция" && ::barcode.isInitialized) {
+            outState.putString("barcode", barcode.text.toString())
+            outState.putString("quantity", quantity.text.toString())
+            outState.putInt("kind", kind.selectedItemPosition)
+        }
     }
 
     private fun dp(value: Int) = (resources.displayMetrics.density * value).toInt()
 
-    private fun panel(color: Int, radius: Int = 16) = GradientDrawable().apply {
+    private fun panel(color: Int, radius: Int = 4) = GradientDrawable().apply {
         setColor(color)
         cornerRadius = dp(radius).toFloat()
+        if (color == white || color == soft) setStroke(dp(1), line)
     }
 
     private fun pressable(color: Int, radius: Int) = RippleDrawable(
-        ColorStateList.valueOf(Color.parseColor("#22103B3D")), panel(color, radius), null
+        ColorStateList.valueOf(Color.parseColor("#302F4A3A")), panel(color, radius), null
     )
 
     private fun feedback(message: String, warning: Boolean = false) {
         notice.visibility = if (message.isEmpty()) View.GONE else View.VISIBLE
         notice.text = message
-        notice.setTextColor(if (warning) Color.parseColor("#804412") else teal)
-        notice.background = panel(if (warning) Color.parseColor("#FDF0D9") else mint, 13)
+        notice.setTextColor(if (warning) Color.parseColor("#A8432C") else green)
+        notice.background = panel(if (warning) Color.parseColor("#F1E8D4") else soft)
     }
 
     private fun label(text: String, size: Float = 16f): TextView = TextView(this).apply {
         this.text = text
         textSize = size
         setTextColor(ink)
-        if (size >= 19f) setTypeface(typeface, Typeface.BOLD)
+        if (size >= 19f) typeface = Typeface.create("serif", Typeface.BOLD)
         setPadding(0, dp(8), 0, dp(8))
         content.addView(this)
     }
@@ -78,7 +124,7 @@ class MainActivity : Activity() {
         inputType = type
         setSingleLine()
         setText(initial)
-        background = panel(Color.WHITE, 12)
+        background = panel(white)
         setTextColor(ink)
         setHintTextColor(muted)
         textSize = 16f
@@ -91,8 +137,8 @@ class MainActivity : Activity() {
         text = title
         isAllCaps = false
         val primary = title.startsWith("Провести") || title.startsWith("Повторить") || title.startsWith("Сканировать")
-        setTextColor(if (primary) Color.WHITE else teal)
-        background = pressable(if (primary) teal else mint, 12)
+        setTextColor(if (primary) Color.WHITE else green)
+        background = pressable(if (primary) green else soft, 4)
         setTypeface(typeface, Typeface.BOLD)
         minimumHeight = dp(48)
         setOnClickListener { if (!busy) action() }
@@ -111,21 +157,24 @@ class MainActivity : Activity() {
             setBackgroundColor(paper)
             addView(content)
         })
-        window.statusBarColor = ink
-        window.navigationBarColor = ink
-        val banner = TextView(this).apply {
-            text = "▦   Складской учёт"
-            setTextColor(Color.WHITE)
-            setTypeface(typeface, Typeface.BOLD)
-            textSize = 25f
+        window.statusBarColor = green
+        window.navigationBarColor = green
+        val banner = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(18), 0, dp(14), 0)
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.parseColor("#123E41"), Color.parseColor("#092729"))
-            ).apply { cornerRadius = dp(19).toFloat() }
+            setPadding(dp(10), 0, dp(10), 0)
+            background = panel(green)
+            addView(ImageView(context).apply {
+                setImageResource(R.drawable.warehouse_icon)
+            }, LinearLayout.LayoutParams(dp(35), dp(35)))
+            addView(TextView(context).apply {
+                text = "Склад — учёт товаров"
+                textSize = 18f
+                typeface = Typeface.create("serif", Typeface.BOLD)
+                setTextColor(Color.parseColor("#F1EAD8"))
+                setPadding(dp(9), 0, 0, 0)
+            })
         }
-        content.addView(banner, LinearLayout.LayoutParams(-1, dp(73)).apply { bottomMargin = dp(12) })
+        content.addView(banner, LinearLayout.LayoutParams(-1, dp(54)).apply { bottomMargin = dp(8) })
         val navigation = LinearLayout(this)
         content.addView(navigation)
         for ((title, icon) in listOf("Операция" to "Учёт", "Каталог" to "Товары",
@@ -135,8 +184,8 @@ class MainActivity : Activity() {
                 isAllCaps = false
                 isEnabled = page != title
                 textSize = 13f
-                setTextColor(if (page == title) Color.WHITE else teal)
-                background = pressable(if (page == title) teal else mint, 11)
+                setTextColor(if (page == title) Color.WHITE else green)
+                background = pressable(if (page == title) green else soft, 4)
                 setTypeface(typeface, Typeface.BOLD)
                 setPadding(0, 0, 0, 0)
                 setOnClickListener { if (!busy) show(title) }
@@ -169,7 +218,9 @@ class MainActivity : Activity() {
                         val stock = row.getInt("stock")
                         val minimum = row.getInt("minimum")
                         val status = if (stock < minimum) "Ниже минимума" else "В норме"
-                        "${row.getString("barcode")}\nОстаток $stock шт. · Минимум $minimum\n$status"
+                        val category = row.optString("category", "Без категории")
+                        val price = if (row.isNull("price_kopecks")) "" else " · ${money.format(row.getLong("price_kopecks") / 100.0)}"
+                        "$category$price\n${row.getString("barcode")}\nОстаток $stock шт. · Минимум $minimum\n$status"
                     }
                     "Журнал" -> {
                         val operation = if (row.getString("kind") == "receipt") "Приёмка" else "Отгрузка"
@@ -182,7 +233,7 @@ class MainActivity : Activity() {
                 }
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
-                    background = panel(Color.WHITE)
+                    background = panel(white)
                     setPadding(dp(16), dp(13), dp(16), dp(13))
                     addView(TextView(context).apply {
                         text = name
@@ -211,22 +262,8 @@ class MainActivity : Activity() {
         val saved = pending?.let(::JSONObject)
         label("Штрихкод")
         barcode = input("8–14 цифр", saved?.optString("barcode") ?: "", InputType.TYPE_CLASS_NUMBER)
-        button("Сканировать камерой") {
-            if (pending == null) {
-                IntentIntegrator(this).setDesiredBarcodeFormats(IntentIntegrator.ONE_D_CODE_TYPES)
-                    .setPrompt("Наведите камеру на линейный штрихкод")
-                    .setBeepEnabled(false).initiateScan()
-            }
-        }.isEnabled = saved == null
-        button("Найти товар") {
-            val code = barcode.text.toString().trim()
-            if (!code.matches(Regex("[0-9]{8,14}"))) {
-                feedback("Введите штрихкод из 8–14 цифр")
-            } else fetch("/api/products/$code") { _, body ->
-                val item = JSONObject(body)
-                feedback("${item.getString("name")} · остаток ${item.getInt("stock")} шт.")
-            }
-        }
+        button("Сканировать камерой") { startScanner() }.isEnabled = saved == null
+        button("Найти товар") { lookupBarcode() }
         label("Вид операции")
         kind = Spinner(this).apply {
             adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item,
@@ -254,6 +291,42 @@ class MainActivity : Activity() {
                 feedback("Адрес сохранён")
             }
         }
+        button("Разрешение камеры") {
+            startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)))
+        }
+    }
+
+    private fun startScanner() {
+        if (pending != null) return
+        if (!packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)) {
+            feedback("На этом устройстве нет доступной камеры. Введите штрихкод вручную.", true)
+        } else if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            cameraPermission.launch(Manifest.permission.CAMERA)
+        } else {
+            openScanner()
+        }
+    }
+
+    private fun openScanner() {
+        scanner.launch(ScanOptions()
+            .setCaptureActivity(WarehouseCaptureActivity::class.java)
+            .setOrientationLocked(false)
+            .setDesiredBarcodeFormats(ScanOptions.ONE_D_CODE_TYPES + ScanOptions.QR_CODE)
+            .setPrompt("Поместите штрихкод целиком в рамку")
+            .setBeepEnabled(false))
+    }
+
+    private fun lookupBarcode(scanned: Boolean = false) {
+        val code = barcode.text.toString().trim()
+        if (!code.matches(barcodePattern)) {
+            feedback(if (scanned) "Код считан, но для товара нужно от 8 до 14 цифр."
+                else "Введите штрихкод из 8–14 цифр", true)
+            return
+        }
+        fetch("/api/products/$code", scannedCode = code.takeIf { scanned }) { _, body ->
+            val item = JSONObject(body)
+            feedback("${item.getString("name")} · остаток ${item.getInt("stock")} шт.")
+        }
     }
 
     private fun setFormEnabled(enabled: Boolean) {
@@ -265,7 +338,7 @@ class MainActivity : Activity() {
     private fun submit() {
         val code = barcode.text.toString().trim()
         val qty = quantity.text.toString().toIntOrNull()
-        if (qty == null || qty !in 1..1_000_000 || !code.matches(Regex("[0-9]{8,14}"))) {
+        if (qty == null || qty !in 1..1_000_000 || !code.matches(barcodePattern)) {
             feedback("Проверьте штрихкод и количество от 1 до 1 000 000")
             return
         }
@@ -286,7 +359,7 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun fetch(path: String, json: String? = null, onSuccess: (Int, String) -> Unit) {
+    private fun fetch(path: String, json: String? = null, scannedCode: String? = null, onSuccess: (Int, String) -> Unit) {
         busy = true
         feedback("Запрос к серверу…")
         val url = server + path
@@ -327,23 +400,16 @@ class MainActivity : Activity() {
                             quantity.setText(JSONObject(json).getString("quantity"))
                             kind.setSelection(if (JSONObject(json).getString("kind") == "shipment") 1 else 0)
                         }
-                        feedback(message, true)
+                        feedback(if (scannedCode == null) message else "Код считан: $scannedCode. $message.", true)
                     }
                 }, {
-                    feedback(if (json == null) "Нет ответа. Проверьте адрес API и сеть."
-                    else "Нет подтверждения. Повторите отправку той же операции.", true)
+                    feedback(when {
+                        scannedCode != null -> "Код считан: $scannedCode. Сервер недоступен. Проверьте адрес в разделе «Подключение»."
+                        json == null -> "Нет ответа. Проверьте адрес API и сеть."
+                        else -> "Нет подтверждения. Повторите отправку той же операции."
+                    }, true)
                 })
             }
-        }
-    }
-
-    @Deprecated("Сканер возвращает результат через Activity")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        val result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data)
-        if (result == null) super.onActivityResult(requestCode, resultCode, data)
-        else if (result.contents != null && screen == "Операция" && pending == null) {
-            barcode.setText(result.contents)
-            feedback("Штрихкод считан. Проверьте товар перед проведением.")
         }
     }
 
