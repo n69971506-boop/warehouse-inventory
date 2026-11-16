@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{847ECF4A-D814-404C-AC03-7D12F7FB2CB7}</ProjectGuid>
+    <SchemaVersion>2.0</SchemaVersion>
+    <Name>Warehouse.Server</Name>
+    <ProjectHome>.</ProjectHome>
+    <StartupFile>app.py</StartupFile>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="app.py" />
+    <Compile Include="tests.py" />
+    <Content Include="api.html" />
+    <Content Include="dashboard.html" />
+    <Content Include="static\dashboard.css" />
+    <Content Include="static\dashboard.js" />
+    <Content Include="requirements.txt" />
+    <Content Include="schema.sql" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+</Project>

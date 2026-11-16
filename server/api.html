@@ -1,0 +1,7 @@
+<!doctype html><html lang="ru"><meta charset="utf-8">
+<title>Складской учёт — API</title><style>body{font:18px system-ui;margin:3rem;max-width:70rem;color:#142d40}pre{background:#e8f0f3;padding:1rem;overflow:auto}</style>
+<h1>Складской учёт</h1><p>Справочник, операции и заявки на закупку</p>
+<ul><li><a href="/api/products">GET /api/products</a></li><li><a href="/api/products/4601234567893">GET /api/products/4601234567893</a></li><li><a href="/api/movements">GET /api/movements</a></li><li><a href="/api/purchases">GET /api/purchases</a></li></ul>
+<h2>POST /api/movements</h2><p>Передайте Content-Type: application/json. Для каждой новой операции используется отдельный request_id.</p>
+<pre>{"barcode":"4601234567893","kind":"receipt","quantity":10,"request_id":"receipt-0001"}</pre>
+</html>

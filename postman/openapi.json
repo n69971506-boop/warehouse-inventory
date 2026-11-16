@@ -1,0 +1,132 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Складской учёт",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8000"
+    }
+  ],
+  "paths": {
+    "/api/products": {
+      "get": {
+        "summary": "Каталог",
+        "responses": {
+          "200": {
+            "description": "Данные в JSON"
+          }
+        }
+      }
+    },
+    "/api/movements": {
+      "get": {
+        "summary": "Журнал",
+        "responses": {
+          "200": {
+            "description": "Данные в JSON"
+          }
+        }
+      },
+      "post": {
+        "summary": "Провести операцию",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "barcode",
+                  "kind",
+                  "quantity",
+                  "request_id"
+                ],
+                "properties": {
+                  "barcode": {
+                    "type": "string",
+                    "pattern": "^[0-9]{8,14}$"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "receipt",
+                      "shipment"
+                    ]
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000000
+                  },
+                  "request_id": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{8,64}$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Повтор"
+          },
+          "201": {
+            "description": "Проведено"
+          },
+          "400": {
+            "description": "Неверные данные"
+          },
+          "404": {
+            "description": "Товар не найден"
+          },
+          "409": {
+            "description": "Конфликт"
+          },
+          "413": {
+            "description": "Тело слишком большое"
+          },
+          "503": {
+            "description": "БД занята"
+          }
+        }
+      }
+    },
+    "/api/purchases": {
+      "get": {
+        "summary": "Заявки",
+        "responses": {
+          "200": {
+            "description": "Данные в JSON"
+          }
+        }
+      }
+    },
+    "/api/products/{barcode}": {
+      "get": {
+        "summary": "Товар по штрихкоду",
+        "parameters": [
+          {
+            "name": "barcode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{8,14}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Товар"
+          },
+          "404": {
+            "description": "Товар не найден"
+          }
+        }
+      }
+    }
+  }
+}

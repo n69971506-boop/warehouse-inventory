@@ -1,0 +1,201 @@
+{
+  "info": {
+    "name": "Складской учёт · демонстрация",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000"
+    }
+  ],
+  "item": [
+    {
+      "name": "Справочник",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/products"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Найти кабель",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/products/4601234567893"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Приёмка 10",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/movements",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"kind\": \"receipt\",\n  \"quantity\": 10,\n  \"request_id\": \"demo-receipt\",\n  \"barcode\": \"4601234567893\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Отгрузка 6",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/movements",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"kind\": \"shipment\",\n  \"quantity\": 6,\n  \"request_id\": \"demo-ship\",\n  \"barcode\": \"4601234567893\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Повтор отгрузки",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/movements",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"kind\": \"shipment\",\n  \"quantity\": 6,\n  \"request_id\": \"demo-ship\",\n  \"barcode\": \"4601234567893\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Недостаточно товара",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/movements",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"kind\": \"shipment\",\n  \"quantity\": 5,\n  \"request_id\": \"demo-excess\",\n  \"barcode\": \"4601234567893\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 409\", () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Журнал",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/movements"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Заявка на 16 шт.",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/purchases"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Кабель: открыта заявка на 16\", () => {",
+              " pm.expect(pm.response.json().some(x => x.barcode === \"4601234567893\" && x.status === \"open\" && x.quantity === 16)).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
